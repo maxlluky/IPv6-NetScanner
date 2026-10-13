@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:IPv6NetScanner.Gui"
+        x:Class="IPv6NetScanner.Gui.MainWindow"
+        x:DataType="local:MainWindow"
+        Title="IPv6-NetScanner" Width="860" Height="520" MinWidth="620" MinHeight="300"
+        Icon="/logo.ico">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+            <ComboBox x:Name="AdapterBox" Width="420" PlaceholderText="Select network adapter" />
+            <Button x:Name="ScanButton" Content="Start Scan" Width="110" Click="OnScanClick" />
+            <Button x:Name="RefreshButton" Content="Refresh adapters" Click="OnRefreshClick" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,10,0,0">
+            <ProgressBar x:Name="ScanProgress" Minimum="0" Maximum="1" Height="6" />
+            <TextBlock x:Name="StatusText" Text="Ready." />
+        </StackPanel>
+
+        <DataGrid x:Name="HostGrid" ItemsSource="{Binding Hosts}" IsReadOnly="True"
+                  AutoGenerateColumns="False" CanUserSortColumns="True" CanUserResizeColumns="True"
+                  GridLinesVisibility="Horizontal" DoubleTapped="OnGridDoubleTapped">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="IPv6 address" Binding="{Binding Address}" Width="2*" />
+                <DataGridTextColumn Header="MAC address" Binding="{Binding Mac}" Width="1.3*" />
+                <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="*" />
+                <DataGridTextColumn Header="Manufacturer" Binding="{Binding Vendor}" Width="2*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

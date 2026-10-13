@@ -1,29 +1,71 @@
-<a>
-    <img src="/src/Resources/load.gif" alt="Logo" title="IPv6-NetScanner" align="right" height="60" />
-</a>
+<img src="src/IPv6NetScanner.Gui/logo.ico" alt="Logo" title="IPv6-NetScanner" align="right" height="60" />
 
 # IPv6 Network Scanner
-This is a fast, simple and super lightweight IPv6 network scanner with graphical interface written with C#, [SharpPcap](https://github.com/chmorgan/sharppcap) and [PacketNet](https://github.com/chmorgan/packetnet).
-A very helpful article about IPv6 address scanning can be found here: [Sanning IPv6 Networks](https://www.dionach.com/blog/scanning-ipv6-networks/)
 
-## Download IPv6 Network Scanner
-**Make sure you have [.NET 4.8.0](https://dotnet.microsoft.com/download/dotnet-framework) and [Npcap](https://nmap.org/download.html) installed!**<br>
-You can download the already compiled IPv6-Scanner (latest working) [here](https://github.com/MonsterSchool/IPv6-NetScanner/releases/download/v.0.9.2.2/IPv6-NetScanner.exe) (releases). 
+A fast, lightweight IPv6 link-local network scanner for **Linux, Windows and macOS**, built on .NET 10,
+[SharpPcap](https://github.com/dotpcap/sharppcap), [PacketDotNet](https://github.com/dotpcap/packetnet) and [Avalonia](https://avaloniaui.net).
+Background: [Scanning IPv6 networks](https://www.dionach.com/blog/scanning-ipv6-networks/).
 
-## Screenshot
 <img src="img/01.JPG">
 
-## The Networkscan
-(coming soon)
-The entire scanning process takes a maximum of 8 seconds. Depending on the response, the different interfaces are assigned to the scopes.
+## How it works
+IPv6 networks are far too large to sweep, so the scanner uses multicast discovery instead. It sends ICMPv6 echo requests
+(with a correct checksum, hop limit 255) from the adapter's link-local address to
 
-## MAC-Address Vendor Database
-The Database-File can be downloaded here: [Link](https://maclookup.app/downloads/cisco-vendor-macs-xml-database) 
+| Group    | Meaning                         |
+|----------|---------------------------------|
+| `ff02::1` | all nodes - every IPv6 host answers |
+| `ff02::2` | all routers - only routers answer   |
 
-## Copyright
-The contents and works in this software created by the software operators are subject to German copyright law. The reproduction, editing, distribution and any kind of use outside the limits of copyright law require the written consent of the respective author or creator. Downloads and copies of this software are only permitted for private, non-commercial use.
+Every echo reply is matched to our request (ICMPv6 identifier + sequence), so a host answering the router
+group is reliably flagged as **Router**. Each group is pinged 3 times (1 s apart) and the scanner listens 2 s
+afterwards - about 5 seconds in total. The MAC address is looked up in an embedded OUI database to show the manufacturer
+(randomized/locally administered MACs show as *Unknown*).
 
-Insofar as the content on this software was not created by the operator, the copyrights of third parties are observed. In particular, third-party content is identified as such. Should you nevertheless become aware of a copyright infringement, please inform us accordingly. If we become aware of any infringements, we will remove such contents immediately.
+## Requirements
+* **.NET 10 runtime** (or use a self-contained build)
+* A packet-capture library:
+  * **Linux**: `libpcap` (`sudo apt install libpcap0.8t64`, `sudo dnf install libpcap`)
+  * **macOS**: libpcap is part of the OS
+  * **Windows**: [Npcap](https://npcap.com)
+* Permission to capture/send raw frames:
+  * **Linux**: run as root or grant capabilities once:
+    `sudo setcap cap_net_raw,cap_net_admin=eip ./IPv6-NetScanner`
+    (for `dotnet run` give them to the `dotnet` host binary or just use `sudo`)
+  * **macOS**: run with `sudo` or give your user access to `/dev/bpf*`
+  * **Windows**: Npcap installed (run as administrator if no adapters show up)
 
-Source: [eRecht24.de](https://www.e-recht24.de/)
-Cheers 👀
+## Build & run
+```bash
+dotnet build
+
+# GUI
+dotnet run --project src/IPv6NetScanner.Gui
+
+# CLI
+dotnet run --project src/IPv6NetScanner.Cli -- --list
+sudo dotnet run --project src/IPv6NetScanner.Cli -- -i eth0
+```
+
+Publish self-contained single files:
+```bash
+dotnet publish src/IPv6NetScanner.Gui -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish src/IPv6NetScanner.Gui -c Release -r win-x64   --self-contained -p:PublishSingleFile=true
+```
+
+## Project layout
+| Path | Content |
+|------|---------|
+| `src/IPv6NetScanner.Core` | Scanner, packet builder, adapter discovery, OUI database (no UI dependency) |
+| `src/IPv6NetScanner.Gui`  | Avalonia desktop app |
+| `src/IPv6NetScanner.Cli`  | Command line scanner |
+| `tests/IPv6NetScanner.Tests` | xUnit tests (checksum, packet layout, vendor lookup) |
+
+## MAC-address vendor database
+`src/IPv6NetScanner.Core/Resources/vendorMacs.xml` is embedded into the assembly. Source: [maclookup.app](https://maclookup.app/downloads/cisco-vendor-macs-xml-database).
+
+## Limitations
+* Only the local link is scanned; hosts that drop multicast echo requests (some firewalls, `icmp6 echo_ignore_multicast`) stay invisible.
+
+## License / Copyright
+See [LICENSE](LICENSE).
